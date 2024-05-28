@@ -1,8 +1,17 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request, abort
 import requests
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
+
+PASSWORD = "Muslimtechaggies!"
+
+# Authentication function
+@app.before_request
+def authenticate():
+    password = request.args.get('password')
+    if password != PASSWORD:
+        abort(401, description="Unauthorized")
 
 # Returns the dictionary {DAY: {MEAL: [Dishes{}]}}
 def getDCMenu(dining_common):
@@ -63,4 +72,3 @@ def menu(dining_common):
 
 if __name__ == '__main__':
     app.run(debug=False)
-
