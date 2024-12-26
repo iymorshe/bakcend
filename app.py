@@ -3,16 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
-
-PASSWORD = "Muslimtechaggies!"
-
-# Authentication function
-@app.before_request
-def authenticate():
-    password = request.args.get('password')
-    if password != PASSWORD:
-        abort(401, description="Unauthorized")
-
+VALID_DCS = {"segundo", "tercero", "cuarto", "latitude"}
 # Returns the dictionary {DAY: {MEAL: [Dishes{}]}}
 def getDCMenu(dining_common):
     url = f"https://housing.ucdavis.edu/dining/menus/dining-commons/{dining_common}/"
@@ -64,9 +55,11 @@ def getDCMenu(dining_common):
                 })
 
     return weekly_menu
-
+# 
 @app.route('/menu/<dining_common>')
 def menu(dining_common):
+    if dining_common not in VALID_DCS:
+        abort(400, description=f"Invalid dining common. Must be one of: {', '.join(VALID_DCS)}")
     menu_data = getDCMenu(dining_common)
     return jsonify(menu_data)
 
