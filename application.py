@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
-VALID_DCS = {"segundo", "tercero", "cuarto", "latitude"}
+
 # Returns the dictionary {DAY: {MEAL: [Dishes{}]}}
 def getDCMenu(dining_common):
     url = f"https://housing.ucdavis.edu/dining/menus/dining-commons/{dining_common}/"
@@ -55,13 +55,46 @@ def getDCMenu(dining_common):
                 })
 
     return weekly_menu
-# 
+
+def getFoodTruckMenu():
+    url = "https://housing.ucdavis.edu/dining/food-trucks/"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'lxml')
+
+    schedule = {}
+    schedule_section = soup.find("div", class_="food_trucks_schedule")
+
+    if schedule_section:
+        days = schedule_section.find_all("h3")
+        for day in days:
+            day_name = day.text.strip()
+            schedule[day_name] = []
+            
+            # Get all elements until next h3 or end
+            current = day.next_sibling
+            while current and not (current.name == 'h3'):
+                if current.name == 'p' and not 'no-trucks' in current.get('class', []):
+                    truck_info = current.text.strip()
+                    if '—' in truck_info:
+                        truck_name, hours = truck_info.split('—')
+                        schedule[day_name].append({
+                            "name": truck_name.replace('strong', '').strip(),
+                            "hours": hours.strip()
+                        })
+                current = current.next_sibling
+
+    return schedule
+
+
 @app.route('/menu/<dining_common>')
 def menu(dining_common):
-    if dining_common not in VALID_DCS:
-        abort(400, description=f"Invalid dining common. Must be one of: {', '.join(VALID_DCS)}")
     menu_data = getDCMenu(dining_common)
     return jsonify(menu_data)
+
+@app.route('/menu/trucks')
+def food_truck_menu():
+    food_truck_menu = getFoodTruckMenu()
+    return jsonify(food_truck_menu)
 
 if __name__ == '__main__':
     app.run(debug=False)
